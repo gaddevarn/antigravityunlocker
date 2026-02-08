@@ -1,5 +1,5 @@
 # Antigravity
-Antigravity в России без VPN и смены региона аккаунта Google
+Antigravity в России без VPN и смены региона аккаунта Google.
 
 Программа, которая позволяет аккаунту Google любой страны (в том числе России) использовать Antigravity без VPN.
 #
