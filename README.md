@@ -29,5 +29,5 @@ https://plati.market/itm/5696863
 
 #
 
-
+🙋 Группа в ТГ: https://t.me/nova_txt
 
