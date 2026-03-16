@@ -15,7 +15,7 @@
 
 Для разблокировки нужно ввести лицензионный код, он платный
 
-[способы приобретения](https://telegra.ph/sposoby-priobreteniya-koda-03-09)
+[способы приобретения](https://confeden.github.io/Antigravity-unlock-code/)
 
 
 # Как разблокировать Antigravity:
