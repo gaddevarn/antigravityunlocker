@@ -11,7 +11,7 @@
 
 # Как скачать?
 
-Нажимаете на [Releases](https://github.com/confeden/Antigravity/releases) и скачиваете последнюю версию (например AG20260318.exe)
+Нажимаете на [Releases](https://github.com/confeden/Antigravity/releases) и скачиваете последнюю версию (например AG20260408.exe)
 
 Для разблокировки нужно ввести лицензионный код, он платный
 
