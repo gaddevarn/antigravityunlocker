@@ -19,8 +19,11 @@
 3) запускаете Antigravity IDE и входите в аккаунт Google
 4) можно использовать Antigravity CLI и Antigravity Desktop
 
-# Работает ли анлокер для 2.0+ версии?
-Да.
+# Работает ли анлокер для 2+ версии?
+Да, он работает для всех агентских программ для кодинга от Google:
+- Antigravity
+- Antigravity IDE
+- Antigravity CLI
 
 #
 
