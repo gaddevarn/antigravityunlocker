@@ -1,6 +1,6 @@
 # Antigravity в России без VPN и смены региона аккаунта Google.
 
-Программа, которая позволяет аккаунту Google любой страны (в том числе России) использовать Antigravity.
+Программа для windows, которая позволяет аккаунту Google любой страны (в том числе России) использовать Antigravity.
 
 Видеоинструкция: https://youtu.be/mQvnQkua734
 
@@ -9,7 +9,7 @@
 
 # Как скачать?
 
-Нажимаете на [Releases](https://github.com/confeden/Antigravity/releases) и скачиваете последнюю версию (например AG_2.0.6.exe)
+Нажимаете на [Releases](https://github.com/confeden/Antigravity/releases) и скачиваете последнюю версию (например AG_2.0.10.exe)
 
 Для разблокировки нужно ввести лицензионный код, взять можно из группы t.me/nova_txt
 
