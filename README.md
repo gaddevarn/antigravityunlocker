@@ -23,7 +23,7 @@
 Да, он работает для всех агентских программ для кодинга от Google:
 - Antigravity 2.0.10
 - Antigravity IDE 2.0.4
-- Antigravity CLI 1.0.5
+- Antigravity CLI 1.0.6
 
 # Чем этот анлокер отличается от другого на Гитхабе?
 
