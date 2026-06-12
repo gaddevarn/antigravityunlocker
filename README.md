@@ -11,7 +11,7 @@
 
 Нажимаете на [Releases](https://github.com/confeden/Antigravity/releases) и скачиваете последнюю версию (например AG_2.0.10.exe)
 
-Для разблокировки нужно ввести лицензионный код, взять можно из группы в ТГ.
+Для разблокировки нужно ввести лицензионный код, взять можно из группы в ТГ [t.me/nova_txt](https://t.me/nova_txt)
 
 # Как разблокировать Antigravity?
 1) скачиваете Antigravity IDE с официального сайта https://antigravity.google/releases и устанавливаете (пока не запускайте)
