@@ -21,9 +21,10 @@
 
 # Работает ли анлокер для 2+ версии?
 Да, он работает для всех агентских программ для кодинга от Google:
-- Antigravity 2.1.4
-- Antigravity IDE 2.0.4
-- Antigravity CLI 1.0.8
+- Antigravity
+- Antigravity IDE
+- Antigravity CLI
+- Gemini CLI (только для платных тарифов)
 
 # Чем этот анлокер отличается от другого на Гитхабе?
 
