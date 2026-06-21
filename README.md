@@ -9,7 +9,7 @@
 
 # Как скачать?
 
-Нажимаете на [Releases](https://github.com/confeden/Antigravity/releases) и скачиваете последнюю версию (например AG_2.0.10.exe)
+Нажимаете на [Releases](https://github.com/confeden/Antigravity/releases) и скачиваете последнюю версию.
 
 Для разблокировки нужно ввести лицензионный код, взять можно из группы, бесплатно [t.me/nova_txt](https://t.me/nova_txt)
 
