@@ -24,7 +24,7 @@
 - Antigravity
 - Antigravity IDE
 - Antigravity CLI
-- Gemini CLI (только при наличии платных подписок Гугла)
+- Gemini CLI nightly (только при наличии платных подписок Гугла)
 
 # Чем этот анлокер отличается от другого на Гитхабе?
 
