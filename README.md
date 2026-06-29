@@ -9,12 +9,12 @@
 
 # Где скачать?
 
-Нажимаете на [Releases](https://antigravity.google/download) и скачиваете последнюю версию.
+Нажимаете на [Releases](https://github.com/confeden/Antigravity/releases) и скачиваете последнюю версию.
 
 Для разблокировки нужно ввести бесплатный лицензионный код, взять можно из группы (в закреплённых сообщениях) [t.me/nova_txt/69864](https://t.me/nova_txt/69864)
 
 # Как разблокировать Antigravity?
-1) скачиваете Antigravity с официального сайта https://antigravity.google/releases и устанавливаете (пока не запускайте)
+1) скачиваете Antigravity с официального сайта [https://antigravity.google/download](https://antigravity.google/download) и устанавливаете (пока не запускайте)
 2) применяете анлокер, после этого его можно закрыть
 3) запускаете Antigravity и входите в аккаунт Google
 
