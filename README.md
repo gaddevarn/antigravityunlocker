@@ -9,7 +9,7 @@
 
 # Где скачать?
 
-Нажимаете на [Releases](https://github.com/confeden/Antigravity/releases) и скачиваете последнюю версию.
+Нажимаете на [Releases](https://antigravity.google/download) и скачиваете последнюю версию.
 
 Для разблокировки нужно ввести бесплатный лицензионный код, взять можно из группы (в закреплённых сообщениях) [t.me/nova_txt/69864](https://t.me/nova_txt/69864)
 
