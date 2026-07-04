@@ -11,6 +11,37 @@ def generate_secret(length=32):
     chars = string.ascii_letters + string.digits + "!@#$%^&*()_+-=[]{}|;:,.<>?"
     return ''.join(random.choices(chars, k=length))
 
+
+def load_or_create_secret(secrets_path):
+    if os.path.exists(secrets_path):
+        try:
+            import json
+            with open(secrets_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                secret = data.get("license_secret", "")
+                if secret:
+                    return secret
+        except Exception as e:
+            print(f"[WARNING] Ошибка загрузки {secrets_path}: {e}")
+
+    secret = os.environ.get("AG_LICENSE_SECRET", "").strip()
+    if secret:
+        return secret
+
+    secret = os.environ.get("LICENSE_SECRET", "").strip()
+    if secret:
+        return secret
+
+    secret = generate_secret(32)
+    try:
+        import json
+        with open(secrets_path, 'w', encoding='utf-8') as f:
+            json.dump({"license_secret": secret}, f, ensure_ascii=False, indent=2)
+            f.write("\n")
+    except Exception as e:
+        print(f"[WARNING] Не удалось сохранить {secrets_path}: {e}")
+    return secret
+
 def replace_in_file(filepath, old_str, new_str):
     with open(filepath, 'r', encoding='utf-8') as f:
         content = f.read()
@@ -24,21 +55,9 @@ def main():
     version = VERSION
     print(f"[INFO] Выбранная версия сборки: {version}")
 
-    # 1. Load or generate secrets
+    # 1. Load or generate a stable secret
     secrets_path = ".secrets.json"
-    is_owner = os.path.exists(secrets_path)
-    license_secret = ""
-    if is_owner:
-        try:
-            import json
-            with open(secrets_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                license_secret = data.get("license_secret", "")
-        except Exception as e:
-            print(f"[WARNING] Ошибка загрузки .secrets.json: {e}")
-            
-    if not license_secret:
-        license_secret = generate_secret(32)
+    license_secret = load_or_create_secret(secrets_path)
 
     main_rs_path = r"src\main.rs"
     

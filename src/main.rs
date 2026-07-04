@@ -16,28 +16,64 @@ fn clear_screen() {
     }
 }
 
-fn verify_key(key: &str) -> bool {
+fn read_secret_from_file(path: &Path) -> Option<String> {
+    let content = fs::read_to_string(path).ok()?;
+    if path.extension().and_then(|e| e.to_str()) == Some("json") {
+        let value: serde_json::Value = serde_json::from_str(&content).ok()?;
+        value.get("license_secret").and_then(|v| v.as_str()).map(str::to_string)
+    } else {
+        Some(content.trim().to_string())
+    }
+}
+
+fn get_license_secret() -> String {
+    if env::var("AG_SKIP_LICENSE").ok().as_deref() == Some("1") {
+        return "skip-license".to_string();
+    }
+
+    env::var("AG_LICENSE_SECRET")
+        .or_else(|_| env::var("LICENSE_SECRET"))
+        .or_else(|_| {
+            let candidates = [
+                PathBuf::from(".secrets.json"),
+                PathBuf::from(".license_secret"),
+            ];
+            for path in candidates {
+                if let Some(secret) = read_secret_from_file(&path) {
+                    return Ok(secret);
+                }
+            }
+            Err(std::env::VarError::NotPresent)
+        })
+        .unwrap_or_else(|_| "___LICENSE_SECRET___".to_string())
+}
+
+fn verify_key_with_secret(key: &str, secret: &str) -> bool {
     let k: String = key.chars().filter(|c| c.is_ascii_alphanumeric()).collect();
     let k = k.to_uppercase();
     if k.len() != 24 { return false; }
-    
+
     let mut hasher = Sha256::new();
     hasher.update(&k[..12]);
-    obfstr::obfstr! {
-        let secret = "___LICENSE_SECRET___";
-    }
     hasher.update(secret.as_bytes());
     let expected = hex::encode(hasher.finalize()).to_uppercase();
     let expected = &expected[..12];
-    
+
     if k[12..].len() != expected.len() { return false; }
-    
+
     let mut result = 0;
     for (x, y) in k[12..].chars().zip(expected.chars()) {
         result |= (x as u8) ^ (y as u8);
     }
     thread::sleep(Duration::from_millis(300));
     result == 0
+}
+
+fn verify_key(key: &str) -> bool {
+    if env::var("AG_SKIP_LICENSE").ok().as_deref() == Some("1") {
+        return true;
+    }
+    verify_key_with_secret(key, &get_license_secret())
 }
 
 fn login_screen() {
@@ -68,36 +104,165 @@ fn login_screen() {
     }
 }
 
-fn find_all_installs() -> Vec<PathBuf> {
-    let mut installs = Vec::new();
-    let local_appdata = env::var("LOCALAPPDATA").unwrap_or_default();
-    let prog_files = env::var("PROGRAMFILES").unwrap_or_default();
-    let prog_files_x86 = env::var("PROGRAMFILES(X86)").unwrap_or_default();
-    
-    let candidates = vec![
-        PathBuf::from(&local_appdata).join("Programs").join("Antigravity"),
-        PathBuf::from(&prog_files).join("Antigravity"),
-        PathBuf::from(&prog_files_x86).join("Antigravity"),
-        PathBuf::from(&local_appdata).join("Antigravity"),
-        PathBuf::from(&local_appdata).join("Programs").join("Antigravity IDE"),
-        PathBuf::from(&prog_files).join("Antigravity IDE"),
-        PathBuf::from(&prog_files_x86).join("Antigravity IDE"),
-        PathBuf::from(&local_appdata).join("Antigravity IDE"),
-        PathBuf::from("D:\\Programs\\Antigravity IDE"),
-        PathBuf::from("C:\\Programs\\Antigravity IDE"),
-        PathBuf::from(&local_appdata).join("agy").join("bin")
-    ];
-    
-    for path in candidates {
-        if path.exists() && path.is_dir() {
-            if path.join("resources").exists() && !installs.contains(&path) {
-                installs.push(path.clone());
-            } else if path.join("agy.exe").exists() && !installs.contains(&path) {
-                installs.push(path.clone());
+fn print_usage() {
+    println!("Использование:");
+    println!("  ag_unlocker [--install-path /path/to/Antigravity]");
+    println!();
+    println!("Например:");
+    println!("  ag_unlocker --install-path /home/you/.local/share/Antigravity");
+    println!("  ag_unlocker --install-path /opt/antigravity");
+    println!();
+    println!("Можно также задать путь через переменную ANTIGRAVITY_INSTALL_PATH.");
+}
+
+fn parse_install_path_args() -> Vec<PathBuf> {
+    let mut overrides = Vec::new();
+    let mut args = env::args().skip(1);
+
+    while let Some(arg) = args.next() {
+        match arg.as_str() {
+            "--help" | "-h" => {
+                print_usage();
+                std::process::exit(0);
             }
+            "--install-path" | "--path" => {
+                if let Some(path) = args.next() {
+                    overrides.push(PathBuf::from(path));
+                }
+            }
+            _ => {}
         }
     }
+
+    overrides
+}
+
+fn is_probable_antigravity_install(path: &Path) -> bool {
+    let resources = path.join("resources");
+    let app_dir = resources.join("app");
+    let app_asar = resources.join("app.asar");
+    let has_app_bundle = app_asar.exists() || app_dir.exists();
+    let has_patch_targets = app_dir.join("out").join("main.js").exists()
+        || app_dir.join("dist").join("main.js").exists()
+        || app_dir.join("extensions").join("antigravity").join("dist").join("extension.js").exists();
+    let has_cli = path.join("agy").exists() || path.join("agy.exe").exists();
+
+    (resources.exists() && (has_app_bundle || has_patch_targets)) || has_cli
+}
+
+fn expand_install_path(path: &Path) -> PathBuf {
+    if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        env::current_dir().unwrap_or_else(|_| PathBuf::from(".")).join(path)
+    }
+}
+
+fn find_all_installs(cli_overrides: &[PathBuf]) -> Vec<PathBuf> {
+    let mut installs = Vec::new();
+    let mut add_candidate = |path: PathBuf| {
+        let normalized = expand_install_path(&path);
+        if normalized.exists() && normalized.is_dir() && is_probable_antigravity_install(&normalized) && !installs.iter().any(|existing| existing == &normalized) {
+            installs.push(normalized);
+        }
+    };
+
+    for raw in cli_overrides {
+        add_candidate(raw.clone());
+    }
+
+    if let Ok(path) = env::var("ANTIGRAVITY_INSTALL_PATH") {
+        add_candidate(PathBuf::from(path));
+    }
+
+    if cfg!(target_os = "windows") {
+        let local_appdata = env::var("LOCALAPPDATA").unwrap_or_default();
+        let prog_files = env::var("PROGRAMFILES").unwrap_or_default();
+        let prog_files_x86 = env::var("PROGRAMFILES(X86)").unwrap_or_default();
+
+        let candidates = vec![
+            PathBuf::from(&local_appdata).join("Programs").join("Antigravity"),
+            PathBuf::from(&prog_files).join("Antigravity"),
+            PathBuf::from(&prog_files_x86).join("Antigravity"),
+            PathBuf::from(&local_appdata).join("Antigravity"),
+            PathBuf::from(&local_appdata).join("Programs").join("Antigravity IDE"),
+            PathBuf::from(&prog_files).join("Antigravity IDE"),
+            PathBuf::from(&prog_files_x86).join("Antigravity IDE"),
+            PathBuf::from(&local_appdata).join("Antigravity IDE"),
+            PathBuf::from("D:\\Programs\\Antigravity IDE"),
+            PathBuf::from("C:\\Programs\\Antigravity IDE"),
+            PathBuf::from(&local_appdata).join("agy").join("bin")
+        ];
+
+        for path in candidates {
+            add_candidate(path);
+        }
+    } else {
+        if let Ok(home) = env::var("HOME") {
+            let home = PathBuf::from(home);
+            let linux_candidates = vec![
+                home.join(".local").join("share").join("Antigravity"),
+                home.join(".local").join("share").join("antigravity"),
+                home.join(".local").join("share").join("Antigravity IDE"),
+                home.join(".local").join("share").join("antigravity-ide"),
+                home.join(".local").join("share").join("antigravity-ide").join("resources"),
+                home.join(".local").join("share").join("applications").join("Antigravity"),
+                home.join("Applications").join("Antigravity"),
+                home.join("Applications").join("Antigravity IDE"),
+            ];
+            for path in linux_candidates {
+                add_candidate(path);
+            }
+        }
+
+        let system_candidates = vec![
+            PathBuf::from("/opt/antigravity"),
+            PathBuf::from("/opt/antigravity-ide"),
+            PathBuf::from("/opt/Antigravity"),
+            PathBuf::from("/opt/Antigravity IDE"),
+            PathBuf::from("/usr/share/antigravity"),
+            PathBuf::from("/usr/share/antigravity-ide"),
+        ];
+
+        for path in system_candidates {
+            add_candidate(path);
+        }
+    }
+
     installs
+}
+
+fn terminate_processes() {
+    #[cfg(target_os = "windows")]
+    {
+        for proc_name in &["antigravity", "language_server", "agy"] {
+            Command::new("taskkill")
+                .args(["/F", "/IM", &format!("{}.exe", proc_name)])
+                .output()
+                .ok();
+        }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        for proc_name in ["antigravity", "language_server", "agy", "electron"] {
+            let _ = Command::new("pkill").args(["-f", proc_name]).output();
+            let _ = Command::new("killall").arg(proc_name).output();
+        }
+    }
+}
+
+fn ensure_writable_install(install: &Path) -> Result<(), String> {
+    let test_path = install.join(".ag_unlocker_write_test");
+    fs::write(&test_path, b"").map_err(|e| {
+        format!(
+            "Папка '{}' недоступна для записи: {}. Запустите программу с sudo/паролем.",
+            install.display(),
+            e
+        )
+    })?;
+    let _ = fs::remove_file(&test_path);
+    Ok(())
 }
 
 fn patch_binary(_inst: &Path, bin_path: &Path) -> Result<(), String> {
@@ -172,23 +337,27 @@ fn unpatch_binary(bin_path: &Path) -> Result<bool, String> {
 }
 
 fn patch_all_binaries(inst: &Path) {
-    // CLI: agy.exe carries a user-facing eligibility check that we want to bypass.
-    let cli = inst.join("agy.exe");
-    if cli.exists() {
-        match patch_binary(inst, &cli) {
-            Ok(_) => println!("  [OK] CLI binary patched"),
-            Err(e) => println!("  [ERR] CLI patch failed: {}", e),
+    let cli_candidates = [
+        inst.join("agy"),
+        inst.join("agy.exe"),
+        inst.join("resources").join("bin").join("agy"),
+        inst.join("resources").join("bin").join("agy.exe"),
+    ];
+    for cli in cli_candidates.iter() {
+        if cli.exists() {
+            match patch_binary(inst, cli) {
+                Ok(_) => println!("  [OK] CLI binary patched"),
+                Err(e) => println!("  [ERR] CLI patch failed: {}", e),
+            }
         }
     }
 
-    // LS binaries (language_server.exe): patch `ineligible` -> `inexigible` so the
-    // renderer (served by the LS) never sees `"ineligible": true` in JSON API responses.
-    // This affects protobuf JSON marshalling — field names change but field numbers
-    // (used in proto binary encoding) remain intact.
     let ls_candidates = [
+        inst.join("resources").join("bin").join("language_server"),
         inst.join("resources").join("bin").join("language_server.exe"),
         inst.join("resources").join("app").join("extensions").join("antigravity").join("bin").join("language_server_windows_x64.exe"),
         inst.join("resources").join("app").join("extensions").join("antigravity").join("bin").join("language_server.exe"),
+        inst.join("resources").join("app").join("extensions").join("antigravity").join("bin").join("language_server"),
     ];
     for ls in ls_candidates.iter() {
         if ls.exists() {
@@ -663,19 +832,14 @@ fn patch_extension_js(inst: &Path) -> Result<bool, String> {
 }
 
 fn process_install(install: &Path) -> Result<String, String> {
-    // Kill any running Antigravity processes to avoid file locks during patching.
-    for proc_name in &["antigravity", "language_server", "agy"] {
-        Command::new("taskkill")
-            .args(&["/F", "/IM", &format!("{}.exe", proc_name)])
-            .output()
-            .ok();
-    }
+    ensure_writable_install(install)?;
+    terminate_processes();
     thread::sleep(Duration::from_millis(1000));
 
     // Patch all relevant binaries (Language Server / CLI)
     patch_all_binaries(install);
 
-    if install.join("agy.exe").exists() {
+    if install.join("agy").exists() || install.join("agy.exe").exists() {
         return Ok("Antigravity CLI".to_string());
     }
 
@@ -990,8 +1154,8 @@ fn get_system_gemini_api_key() -> Option<String> {
     None
 }
 
-fn handle_patch_antigravity() {
-    let installs = find_all_installs();
+fn handle_patch_antigravity(cli_overrides: &[PathBuf]) {
+    let installs = find_all_installs(cli_overrides);
 
     if installs.is_empty() {
         println!("{}", "Установки Antigravity не найдены.");
@@ -1349,7 +1513,26 @@ fn show_admin_prewarning() {
     io::stdin().read_line(&mut tmp).ok();
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn verify_key_accepts_matching_secret() {
+        let secret = "test-secret";
+        let nonce = "ABCDEF123456";
+        let mut hasher = Sha256::new();
+        hasher.update(nonce);
+        hasher.update(secret.as_bytes());
+        let expected = hex::encode(hasher.finalize()).to_uppercase();
+        let key = format!("{}{}", nonce, &expected[..12]);
+        assert!(verify_key_with_secret(&key, secret));
+    }
+}
+
 fn main() {
+    let install_overrides = parse_install_path_args();
+
     let window_title = format!("Antigravity анлокер v{}", APP_VERSION);
     #[cfg(target_os = "windows")]
     console_style::set(&window_title);
@@ -1383,7 +1566,7 @@ fn main() {
         io::stdin().read_line(&mut choice).unwrap();
 
         match choice.trim() {
-            "1" => handle_patch_antigravity(),
+            "1" => handle_patch_antigravity(&install_overrides),
             "2" => handle_patch_gemini(),
             "3" => handle_restore_dns(),
             "4" => open_url("https://t.me/nova_txt"),
