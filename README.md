@@ -52,30 +52,7 @@ cargo build --release
 ./target/release/ag_unlocker
 ```
 
-## Запуск на Linux
-
-### Базовый запуск
-
-```bash
-./target/release/ag_unlocker
-```
-
-### Запуск с явным путём к папке Antigravity IDE
-
-Если Antigravity IDE стоит не в стандартной папке, запускайте так:
-
-```bash
-./target/release/ag_unlocker --install-path /home/USER/AntigravityIDE
-```
-
-Или через переменную окружения:
-
-```bash
-export ANTIGRAVITY_INSTALL_PATH=/home/USER/AntigravityIDE
-./target/release/ag_unlocker
-```
-
-### Запуск без проверки лицензии для локальных тестов
+## Запуск на Linux без проверки лицензии для локальных тестов
 
 Если нужно только проверить сам процесс патча и не застревать на ключе, можно использовать:
 
